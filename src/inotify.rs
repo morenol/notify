@@ -456,7 +456,7 @@ impl EventLoop {
             .into_iter()
             .filter_map(filter_dir)
         {
-            self.add_single_watch(entry.path().to_path_buf(), is_recursive, watch_self)?;
+            self.add_single_watch(entry, is_recursive, watch_self)?;
             watch_self = false;
         }
 
@@ -557,12 +557,15 @@ impl EventLoop {
 }
 
 /// return `DirEntry` when it is a directory
-fn filter_dir(e: walkdir::Result<walkdir::DirEntry>) -> Option<walkdir::DirEntry> {
+fn filter_dir(e: walkdir::Result<walkdir::DirEntry>) -> Option<PathBuf> {
     if let Ok(e) = e {
         if let Ok(metadata) = e.metadata() {
             if metadata.is_dir() {
-                return Some(e);
+                return Some(e.path().to_path_buf());
             }
+        }
+        if e.path_is_symlink() {
+            return std::fs::canonicalize(e.path()).ok();
         }
     }
     None
